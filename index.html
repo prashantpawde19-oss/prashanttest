@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ship PR Impact Analysis Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background: radial-gradient(circle at top left, #1e1b4b, #0f172a, #020617);
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow-x: hidden;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 440px;
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 18px;
+      padding: 32px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .container.dashboard-view {
+      max-width: 860px;
+      min-height: 580px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    h1, h2, h3 {
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+    }
+
+    p.subtitle {
+      color: #94a3b8;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+      text-align: left;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #cbd5e1;
+      margin-bottom: 6px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+    }
+
+    .error-msg {
+      display: none;
+      color: #f87171;
+      font-size: 13px;
+      margin-top: -10px;
+      margin-bottom: 12px;
+      text-align: left;
+    }
+
+    .btn {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 10px;
+      background: #4f46e5;
+      color: #fff;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-full {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+    }
+
+    .btn:hover {
+      background: #4338ca;
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #cbd5e1;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+    }
+
+    .pill-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 500;
+      margin-bottom: 14px;
+    }
+
+    .badge-public {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+
+    /* Top Nav Tabs */
+    .nav-tabs {
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 22px;
+      padding-bottom: 8px;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .tab-btn.active {
+      color: #fff;
+      background: rgba(99, 102, 241, 0.2);
+      font-weight: 600;
+    }
+
+    /* Tab Content Layouts */
+    .tab-pane {
+      display: none;
+      animation: fadeIn 0.3s ease forwards;
+    }
+
+    .tab-pane.active {
+      display: block;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 16px;
+      border-radius: 12px;
+      text-align: left;
+    }
+
+    .stat-title {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+
+    /* Data Table */
+    .table-container {
+      width: 100%;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(15, 23, 42, 0.5);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    th {
+      background: rgba(30, 41, 59, 0.8);
+      padding: 12px 14px;
+      color: #cbd5e1;
+      font-weight: 600;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      color: #94a3b8;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+      color: #f1f5f9;
+    }
+
+    .tag {
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .tag-pass { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+    .tag-review { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+    .tag-secure { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
+
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .fade-in {
+      animation: fadeIn 0.4s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Auth Card -->
+  <div id="loginCard" class="container fade-in">
+    <div class="pill-badge badge-public">
+      <span class="badge-dot"></span> Production Ready
+    </div>
+    <h2>Sign in</h2>
+    <p class="subtitle">Access your testing workspace & PR impact suite.</p>
+
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <input type="email" id="email" placeholder="name@company.com" required value="admin@gmail.com" />
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Password" required value="admin123" />
+      </div>
+
+      <div id="errorMessage" class="error-msg">Invalid credentials. Use admin@gmail.com / admin123</div>
+
+      <button type="submit" id="loginBtn" class="btn btn-full">
+        <span>Sign in to Dashboard</span>
+      </button>
+    </form>
+  </div>
+
+  <!-- Dashboard Workspace -->
+  <div id="dashboardCard" class="container dashboard-view hidden">
+    
+    <div class="header-bar">
+      <div>
+        <div class="pill-badge badge-public">
+          <span class="badge-dot"></span> Active Session
+        </div>
+        <h2>PR Impact Hub</h2>
+      </div>
+      <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;" onclick="handleLogout()">Sign out</button>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('overview', this)">Overview</button>
+      <button class="tab-btn" onclick="switchTab('impactRuns', this)">PR Impact Runs</button>
+      <button class="tab-btn" onclick="switchTab('endpoints', this)">Target Endpoints</button>
+    </div>
+
+    <!-- TAB 1: Overview -->
+    <div id="tab-overview" class="tab-pane active">
+      <p class="subtitle">Real-time health of active PR branches and regression coverage.</p>
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-title">PR Impact Pass Rate</div>
+          <div class="stat-value" id="impactMetric">98.4%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">Active Test Suites</div>
+          <div class="stat-value">18 Suites</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">System Status</div>
+          <div class="stat-value" style="color: #34d399;">Healthy 🟢</div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <button class="btn" onclick="triggerSanityCheck()">Trigger Run Validation</button>
+      </div>
+    </div>
+
+    <!-- TAB 2: PR Impact Runs -->
+    <div id="tab-impactRuns" class="tab-pane">
+      <p class="subtitle">Detailed analysis of test executions impacted by incoming pull requests.</p>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>PR / Run Name</th>
+              <th>Branch</th>
+              <th>Impact Scope</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="color:#f1f5f9; font-weight:500;">PR #104 - Step Group Navigation Fix</td>
+              <td><code>fix/step-group-404</code></td>
+              <td>12 Affected Tests</td>
+              <td><span class="tag tag-pass">Passed</span></td>
+            </tr>
+            <tr>
+              <td style="color:#f1f5f9; font-weight:500;">PR #108 - Auth Password Policy Validation</td>
+              <td><code>feature/pwd-policy</code></td>
+              <td>24 Affected Tests</td>
+              <td><span class="tag tag-pass">Passed</span></td>
+            </tr>
+            <tr>
+              <td style="color:#f1f5f9; font-weight:500;">PR #112 - Self-Serve Schedule Controls</td>
+              <td><code>fix/schedule-ui</code></td>
+              <td>6 Affected Tests</td>
+              <td><span class="tag tag-review">Review Needed</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 3: Target Endpoints -->
+    <div id="tab-endpoints" class="tab-pane">
+      <p class="subtitle">Configured target URLs and deployment protection states.</p>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Environment</th>
+              <th>URL Endpoint</th>
+              <th>Access Mode</th>
+              <th>Auth Type</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="color:#f1f5f9; font-weight:500;">Vercel Public Preview</td>
+              <td><code>https://pr-demo.vercel.app/</code></td>
+              <td><span class="tag tag-pass">Public</span></td>
+              <td>None</td>
+            </tr>
+            <tr>
+              <td style="color:#f1f5f9; font-weight:500;">Vercel Protected Preview</td>
+              <td><code>https://pr-demo-auth.vercel.app/</code></td>
+              <td><span class="tag tag-secure">Protected</span></td>
+              <td>Vercel Auth / Password</td>
+            </tr>
+            <tr>
+              <td style="color:#f1f5f9; font-weight:500;">Production Baseline</td>
+              <td><code>https://prod.contextqa.com/</code></td>
+              <td><span class="tag tag-secure">Production</span></td>
+              <td>OAuth / Session</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function handleLogin(event) {
+      event.preventDefault();
+      const emailInput = document.getElementById('email').value.trim();
+      const passwordInput = document.getElementById('password').value.trim();
+      const errorMsg = document.getElementById('errorMessage');
+      const loginBtn = document.getElementById('loginBtn');
+
+      if (emailInput === 'admin@gmail.com' && passwordInput === 'admin123') {
+        errorMsg.style.display = 'none';
+        loginBtn.innerHTML = 'Signing in...';
+        loginBtn.style.opacity = '0.7';
+
+        setTimeout(() => {
+          document.getElementById('loginCard').classList.add('hidden');
+          const dash = document.getElementById('dashboardCard');
+          dash.classList.remove('hidden');
+          dash.classList.add('fade-in');
+          loginBtn.innerHTML = 'Sign in to Dashboard';
+          loginBtn.style.opacity = '1';
+        }, 400);
+      } else {
+        errorMsg.style.display = 'block';
+      }
+    }
+
+    function handleLogout() {
+      document.getElementById('dashboardCard').classList.add('hidden');
+      const login = document.getElementById('loginCard');
+      login.classList.remove('hidden');
+      login.classList.add('fade-in');
+    }
+
+    function switchTab(tabId, element) {
+      document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+      document.getElementById('tab-' + tabId).classList.add('active');
+      element.classList.add('active');
+    }
+
+    function triggerSanityCheck() {
+      const metric = document.getElementById('impactMetric');
+      metric.innerText = 'Validating...';
+      metric.style.color = '#fbbf24';
+      setTimeout(() => {
+        metric.innerText = '100% Passed';
+        metric.style.color = '#34d399';
+      }, 700);
+    }
+  </script>
+</body>
+</html>
